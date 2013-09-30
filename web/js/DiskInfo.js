@@ -12,6 +12,35 @@
 SMARTMonitoring = {};
 
 /**
+ * Plain compare to
+ *
+ * @param {Object} obj
+ * @return {number}
+ */
+Object.prototype.compareTo = function(obj){
+    return this<obj ? -1 : (this>obj ? 1 : 0);
+}
+
+/**
+ * Compare strings
+ *
+ * @param {String} obj
+ * @return {number}
+ */
+String.prototype.compareTo = function(obj){
+    return this<obj ? -1 : (this>obj ? 1 : 0);
+}
+
+/**
+ * Sort array of object by compareTo method
+ */
+Array.prototype.sortObjects = function(){
+    this.sort(function(a, b){
+        return a.compareTo(b);
+    })
+}
+
+/**
  * Identify data holder object
  *
  * @constructor
@@ -268,6 +297,58 @@ SMARTMonitoring.SmartInfo = function(obj){
 }
 
 /**
+ * Overall priority
+ */
+SMARTMonitoring.SmartInfo.OVERALL_PRIORITY = {
+    "GOOD" : 0,
+    "BAD_ATTRIBUTE_IN_THE_PAST" : 2,
+    "BAD_SECTOR" : 3,
+    "BAD_ATTRIBUTE_NOW" : 4,
+    "BAD_SECTOR_MANY" : 5,
+    "BAD_STATUS" : 6
+}
+
+/**
+ * Compare function
+ *
+ * @param {SMARTMonitoring.SmartInfo} obj
+ */
+SMARTMonitoring.SmartInfo.prototype.compareTo = function(obj){
+
+    if(obj.constructor !== SMARTMonitoring.SmartInfo){
+        throw "Unexpected object inside compare to";
+    }
+
+    if(this.diskStatus<obj.diskStatus){
+
+        return -1;
+
+    } else if(this.diskStatus>obj.diskStatus){
+
+        return 1;
+
+    } else {
+
+        var OVERALL_PRIORITY = SMARTMonitoring.SmartInfo.OVERALL_PRIORITY;
+
+        if(OVERALL_PRIORITY[this.overall]<OVERALL_PRIORITY[obj.overall]){
+
+            return 1;
+
+        } else if(OVERALL_PRIORITY[this.overall]>OVERALL_PRIORITY[obj.overall]){
+
+            return -1;
+
+        } else {
+
+            return this.attributeVerification.compareTo(obj.attributeVerification);
+
+        }
+    }
+
+}
+
+/**
  * @constructor
  */
 SMARTMonitoring.DiskInfo = function(obj){
@@ -341,12 +422,46 @@ SMARTMonitoring.DiskInfo = function(obj){
     this.smartInfo = new SMARTMonitoring.SmartInfo(obj.smartInfo);
 }
 
+
+/**
+ * Compare function
+ *
+ * @param {SMARTMonitoring.DiskInfo} obj
+ */
+SMARTMonitoring.DiskInfo.prototype.compareTo = function(obj){
+    if(obj.constructor !== SMARTMonitoring.DiskInfo){
+        throw "Unexpected object inside compare to";
+    }
+
+    if(this.smartAvailable && !obj.smartAvailable){
+
+        return -1;
+
+    } else if(!this.smartAvailable && obj.smartAvailable){
+
+        return 1;
+
+    } else if(!this.smartAvailable && !obj.smartAvailable){
+
+        return this.devicePath.compareTo(obj.devicePath)
+
+    } else {
+
+        var smartCompareResult = this.smartInfo.compareTo(obj.smartInfo);
+
+        if(smartCompareResult==0){
+            return this.devicePath.compareTo(obj.devicePath);
+        }
+
+    }
+}
+
 /**
  * Info about all hdds from the server
  *
  * @constructor
  */
-SMARTMonitoring.Disks = function(obj){
+SMARTMonitoring.Server = function(obj){
 
     obj = obj || {};
 
@@ -364,13 +479,53 @@ SMARTMonitoring.Disks = function(obj){
      */
     this.disks = [];
 
+    /**
+     *
+     * For example
+     *
+     * 0 - no bad drives on server
+     *
+     * 100 - a lot of bad drives
+     *
+     * @type {number}
+     */
+    this.totalOverAllIndex = 0;
+
+    var OVERALL_PRIORITY = SMARTMonitoring.SmartInfo.OVERALL_PRIORITY;
+
     if(this.found && obj.disks && obj.disks.length){
 
         for(var i=0; i<obj.disks.length; i++){
-            this.disks.push(new SMARTMonitoring.DiskInfo(obj.disks[i]));
+
+            /**
+             * Current disk
+             *
+             * @type {SMARTMonitoring.DiskInfo}
+             */
+            var disk = new SMARTMonitoring.DiskInfo(obj.disks[i]);
+
+            if(disk.smartAvailable){
+                this.totalOverAllIndex+=OVERALL_PRIORITY[disk.smartInfo.overall];
+            }
+
+
+            this.disks.push(disk);
         }
 
     }
 
+    this.disks.sortObjects();
 
+
+}
+
+/**
+ * Compare 2 server priority
+ *
+ *
+ * @param {SMARTMonitoring.Server} obj
+ */
+SMARTMonitoring.Server.prototype.compareTo = function(obj){
+    return this.totalOverAllIndex > obj.totalOverAllIndex ? -1
+        : (this.totalOverAllIndex < obj.totalOverAllIndex ? 1 : 0);
 }
