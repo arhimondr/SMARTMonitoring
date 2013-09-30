@@ -461,7 +461,7 @@ SMARTMonitoring.DiskInfo.prototype.compareTo = function(obj){
  *
  * @constructor
  */
-SMARTMonitoring.Server = function(obj){
+SMARTMonitoring.ServerInfo = function(obj){
 
     obj = obj || {};
 
@@ -523,9 +523,9 @@ SMARTMonitoring.Server = function(obj){
  * Compare 2 server priority
  *
  *
- * @param {SMARTMonitoring.Server} obj
+ * @param {SMARTMonitoring.ServerInfo} obj
  */
-SMARTMonitoring.Server.prototype.compareTo = function(obj){
+SMARTMonitoring.ServerInfo.prototype.compareTo = function(obj){
     return this.totalOverAllIndex > obj.totalOverAllIndex ? -1
         : (this.totalOverAllIndex < obj.totalOverAllIndex ? 1 : 0);
 }

@@ -12,7 +12,7 @@ $(function(){
         url: 'http://localhost:8080/status',
         dataType: 'jsonp',
         success: function(data){
-            var diskInfo = new SMARTMonitoring.Server(data);
+            var diskInfo = new SMARTMonitoring.ServerInfo(data);
             //debugger;
         }
     });
